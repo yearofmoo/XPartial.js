@@ -18,6 +18,7 @@ XPartial.implement({
     className : 'xpartial',
     storageKeyName : 'XPartial',
     loadingClassName : 'loading',
+    preserveHeightBetweenRequests : true,    
     applyXViewHeadersToElement : 'id,className',
     elementOptions : {
 
@@ -58,13 +59,26 @@ XPartial.implement({
     if(!this.element) {
       this.element = new Element('div');
     }
+
+    this.customizeElement();
+
+    if(this.options.container) {
+      this.element.inject(this.options.container);
+    }
+
+    this.element.store(this.options.storageKeyName,this);
+    if(!this.inner) {
+      this.inner = new Element('div.inner').inject(this.element);
+    }
+  },
+
+  customizeElement : function() {
     if(this.options.elementOptions) {
       this.element.set(this.options.elementOptions);
     }
     if(this.options.className) {
       this.element.addClass(this.options.className);
     }
-    this.element.store(this.options.storageKeyName,this);
   },
 
   getRequester : function() {
@@ -91,6 +105,7 @@ XPartial.implement({
 
   onRequest : function() {
     this.ready = false;
+    this.empty();
     this.show();
     this.showLoading();
     this.fireEvent('request',[this.getElement()]);
@@ -101,6 +116,7 @@ XPartial.implement({
     this.show();
     this.callChain();
     this.fireEvent('complete',[this.getElement()]);
+    this.requested = true;
     this.ready = true;
   },
 
@@ -114,9 +130,11 @@ XPartial.implement({
         headers = [headers];
       }
       var element = this.getElement();
+      var cache = [];
       headers.each(function(header) {
         var value = xview.getHeader(header);
         if(value) {
+          cache.push(header);
           if(header == 'className') {
             element.addClass(value);
           }
@@ -125,11 +143,27 @@ XPartial.implement({
           }
         }
       },this);
+      if(cache.length > 0) {
+        this.cachedXViewHeaders = cache;
+      }
+    }
+  },
+
+  stripXViewHeaders : function() {
+    if(this.cachedXViewHeaders) {
+      var element = this.getElement();
+      this.cachedXViewHeaders.each(function(header) {
+        element.set(header,null);
+      },this);
+      this.cachedXViewHeaders = null;
+      this.customizeElement();
     }
   },
 
   onResponse : function(html) {
     var xview = new XView(html);
+
+    this.unlockHeight();
     this.setContent(xview.getContent());
     this.showLoading();
     this.applyXViewHeaders(xview);
@@ -143,7 +177,25 @@ XPartial.implement({
     }
   },
 
+  hasPreviousRequest : function() {
+    return this.requested;
+  },
+
+  lockHeight : function() {
+    var elm = this.getElement();
+    var height = elm.getSize().y;
+    elm.setStyle('height',height);
+  },
+
+  unlockHeight : function() {
+    this.getElement().setStyle('height','auto');
+  },
+
   load : function(url,method,data) {
+    if(this.hasPreviousRequest() && this.options.preserveHeightBetweenRequests) {
+      this.lockHeight();
+      this.stripXViewHeaders();
+    }
     this.getRequester().setOptions({
       url : url,
       method : method || 'GET',
@@ -163,12 +215,12 @@ XPartial.implement({
   },
 
   empty : function() {
-    this.getElement().empty();
+    this.getInner().empty();
   },
 
   setContent : function(html) {
     this.empty();
-    var elm = this.getElement();
+    var elm = this.getInner();
     if(typeOf(html) == 'element') {
       elm.adopt(html);
     }
@@ -179,6 +231,10 @@ XPartial.implement({
 
   getElement : function() {
     return this.element;
+  },
+
+  getInner : function() {
+    return this.inner;
   },
 
   showLoading : function() {
