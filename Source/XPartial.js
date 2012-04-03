@@ -237,20 +237,21 @@ XPartial.implement({
     return this.inner;
   },
 
-  showLoading : function() {
+  showLoading : function(fast) {
     var element = this.getElement();
     element.addClass(this.options.loadingClassName);
     var spinner = element.get('spinner');
     spinner.setOptions(this.options.spinnerOptions);
     spinner.position();
-    spinner.show();
+    spinner.show(fast ? true : false);
     this.fireEvent('showLoading',[element]);
   },
 
-  hideLoading : function() {
+  hideLoading : function(fast) {
     var element = this.getElement();
     element.removeClass(this.options.loadingClassName);
-    element.unspin();
+    var spinner = element.get('spinner');
+    spinner.hide(fast ? true : false);
     this.fireEvent('hideLoading',[element]);
   },
 
