@@ -1,117 +1,202 @@
-var XPartial;
-
-(function($) {
-
-XPartial = new Class;
+var XPartial = new Class;
 
 XPartial.extend({
 
-  bind : function(hash) {
-    if(!this.events) {
-      this.events = [];
-    }
-    this.events.push(hash);
-  },
-
-  onReady : function(partial) {
-    (this.events || []).each(function(event) {
-      event.onInit.apply(event,[partial]);
-    });
-  },
-
-  onDestroy : function(instance) {
-    var partial = instance.getContainer();
-    (this.events || []).each(function(event) {
-      event.onDestroy.apply(event,[partial]);
-    });
+  supportsAssets : function() {
+    return Asset && typeOf(Asset.load) == 'function';
   }
 
 });
 
 XPartial.implement({
 
-  Implements : [Options, Events], 
+  Implements : [Options, Events, Chain],
+
+  Binds : ['onRequest','onResponse','onComplete','onFailure'],
 
   options : {
-    requestClass : Request,
-    requestOptions : {
-      method : 'GET'
+    className : 'xpartial',
+    storageKeyName : 'XPartial',
+    loadingClassName : 'loading',
+    applyXViewHeadersToElement : 'id,className',
+    elementOptions : {
+
+    },
+    spinnerOptions : {
+      style : {
+        opacity : 0.5
+      }
     }
   },
 
-  initialize : function(url,container,options) {
-    this.url = url;
-    this.container = $(container);
+  initialize : function(options) {
+    if(!window.Elements || typeOf(window.Elements.from) != 'function') {
+      throw new Error('XPartial: MooTools-more is not included');
+    }
+    if(!window.XView || typeOf(window.XView) != 'class') {
+      throw new Error('XPartial: XView.js is not included');
+    }
     this.setOptions(options);
-  },
-
-  load : function() {
-    var options = this.options.requestOptions;
-    var klass = this.options.requestClass;
-    Object.append(options,{
-      'url' : this.getURL(),
-      'onSuccess' : this.onSuccess.bind(this),
-      'onComplete' : this.onComplete.bind(this)
-    });
-    this.requester = new klass(options).send();
-  },
-
-  getURL : function() {
-    return this.url;
-  },
-
-  getContainer : function() {
-    return this.container;
-  },
-
-  onSuccess : function(html) {
+    this.build(); 
     this.hide();
-    this.xview = new XViewResponse(html);
-    var content = this.xview.getHTML();
-    this.setContent(content);
-    this.fireEvent('success');
-    this.loadAssets();
   },
 
-  onComplete : function() {
-    this.fireEvent('complete');
+  toElement : function() {
+    return this.getElement();
   },
 
-  hide : function() {
-    this.getContainer().setStyle('display','none');
-  },
-
-  show : function() {
-    this.getContainer().setStyle('display','block');
-  },
-
-  setContent : function(html) {
-    this.getContainer().set('html',html);
-  },
-
-  loadAssets : function() {
-    var assets = this.getXView().getAssets();
-    if(assets.length > 0) {
-      Asset.load(assets,this.onReady.bind(this));
+  build : function() {
+    this.element = new Element('div');
+    if(this.options.className) {
+      this.element.addClass(this.options.className);
     }
-    else {
-      this.onReady();
+    if(this.options.elementOptions) {
+      this.element.set(this.options.elementOptions);
     }
+    this.element.store(this.options.storageKeyName,this);
   },
 
-  getXView : function() {
-    return this.xview;
+  getRequester : function() {
+    if(!this.requester) {
+      this.requester = new Request({
+        'onCancel':this.onCancel,
+        'onSuccess':this.onResponse,
+        'onFailure':this.onFailure,
+        'onRequest':this.onRequest
+      });
+    }
+    return this.requester;
+  },
+
+  onCancel : function() {
+    this.hideLoading();
+    this.fireEvent('cancel',[this.getElement()]);
+  },
+
+  onFailure : function() {
+    this.empty();
+    this.fireEvent('failure',[this.getElement()]);
   },
 
   onRequest : function() {
-    this.fireEvent('request');
+    this.ready = false;
+    this.show();
+    this.showLoading();
+    this.fireEvent('request',[this.getElement()]);
   },
 
-  onReady : function() {
+  onComplete : function() {
+    this.hideLoading();
     this.show();
+    this.callChain();
+    this.fireEvent('complete',[this.getElement()]);
     this.ready = true;
-    XPartial.onReady(this.getContainer());
-    this.fireEvent('ready');
+  },
+
+  applyXViewHeaders : function(xview) {
+    var headers = this.options.applyXViewHeadersToElement;
+    if(headers) {
+      if(typeOf(headers) == 'string') {
+        headers = headers.split(',');
+      }
+      else if(typeOf(headers) != 'array') {
+        headers = [headers];
+      }
+      var element = this.getElement();
+      headers.each(function(header) {
+        var value = xview.getHeader(header);
+        if(value) {
+          if(header == 'className') {
+            element.addClass(value);
+          }
+          else {
+            element.set(header,value);
+          }
+        }
+      },this);
+    }
+  },
+
+  onResponse : function(html) {
+    var xview = new XView(html);
+    this.setContent(xview.getContent());
+    this.showLoading();
+    this.applyXViewHeaders(xview);
+
+    var assets = xview.getAssets();
+    if(XPartial.supportsAssets() && assets && assets.length > 0) {
+      Asset.load(assets,this.onComplete);
+    }
+    else {
+      this.onComplete();
+    }
+  },
+
+  load : function(url,method,data) {
+    this.getRequester().setOptions({
+      url : url,
+      method : method || 'GET',
+      data : data
+    }).send();
+    return this;
+  },
+
+  cancel : function() {
+    if(this.isLoading()) {
+      this.getRequester().cancel();
+    }
+  },
+
+  refresh : function() {
+    this.getRequester().send();
+  },
+
+  empty : function() {
+    this.getElement().empty();
+  },
+
+  setContent : function(html) {
+    this.empty();
+    var elm = this.getElement();
+    if(typeOf(html) == 'element') {
+      elm.adopt(html);
+    }
+    else {
+      elm.set('html',html);
+    }
+  },
+
+  getElement : function() {
+    return this.element;
+  },
+
+  showLoading : function() {
+    var element = this.getElement();
+    element.addClass(this.options.loadingClassName);
+    var spinner = element.get('spinner');
+    spinner.setOptions(this.options.spinnerOptions);
+    spinner.position();
+    spinner.show();
+    this.fireEvent('showLoading',[element]);
+  },
+
+  hideLoading : function() {
+    var element = this.getElement();
+    element.removeClass(this.options.loadingClassName);
+    element.unspin();
+    this.fireEvent('hideLoading',[element]);
+  },
+
+  show : function() {
+    this.getElement().setStyle('display','block');
+  },
+
+  hide : function() {
+    this.getElement().setStyle('display','none');
+  },
+
+  isLoading : function() {
+    return this.getElement().hasClass(this.options.loadingClassName);
   },
 
   isReady : function() {
@@ -119,11 +204,10 @@ XPartial.implement({
   },
 
   destroy : function() {
-    XPartial.onDestroy(this);
-    this.getContainer().destroy();
+    var element = this.getElement();
+    element.eliminate(this.options.storageKeyName);
+    element.destroy();
+    delete this.element;
   }
 
 });
-
-})(document.id,$$);
-

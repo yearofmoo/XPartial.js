@@ -1,0 +1,42 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head>
+<style type="text/css">
+.spinner {
+  background:white url(../Assets/images/spinner.gif) no-repeat center center;
+}
+.xpartial {
+  border:1px solid #ddd;
+  padding:1em;
+}
+</style>
+</head> 
+
+<body id="" class=""> 
+  <div id="wrapper">
+    <a href="./partial.php" id="load">Load Partial</a>
+  </div>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/mootools/1.4.5/mootools-yui-compressed.js"></script>
+<script type="text/javascript" src="../Assets/MooTools-more.js"></script>
+<script type="text/javascript" src="../../Source/Xview.js/Source/XView.js"></script>
+<script type="text/javascript" src="../../Source/MooTools-Asset.css-patch/Source/Asset.css.js"></script>
+<script type="text/javascript" src="../../Source/MooTools-Asset.Extras/Source/Asset.Extras.js"></script>
+<script type="text/javascript" src="../../Source/XPartial.js"></script>
+<script type="text/javascript">
+window.addEvent('domready',function() {
+  $('load').addEvent('click',function(event) {
+    event.stop();
+    var url = this.get('href');
+    var x = new XPartial({
+      elementOptions : {
+        id : 'xpartial'
+      }  
+    });
+    $(x).inject('wrapper');
+
+    x.load(url);
+  });
+});
+</script>
+</body>
+</html> 

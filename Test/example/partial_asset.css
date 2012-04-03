@@ -1,0 +1,8 @@
+#x-part.red {
+  background:red;
+}
+
+#x-part.red,
+#x-part.red a {
+  color:white;
+}
