@@ -29,15 +29,24 @@ XPartial.implement({
     }
   },
 
-  initialize : function(options) {
+  initialize : function(element,options) {
+
     if(!window.Elements || typeOf(window.Elements.from) != 'function') {
       throw new Error('XPartial: MooTools-more is not included');
     }
     if(!window.XView || typeOf(window.XView) != 'class') {
       throw new Error('XPartial: XView.js is not included');
     }
+
+    if(arguments.length == 2) {
+      this.element = document.id(element);
+    }
+    else {
+      options = element;
+    }
+
     this.setOptions(options);
-    this.build(); 
+    this.build();
     this.hide();
   },
 
@@ -46,12 +55,14 @@ XPartial.implement({
   },
 
   build : function() {
-    this.element = new Element('div');
-    if(this.options.className) {
-      this.element.addClass(this.options.className);
+    if(!this.element) {
+      this.element = new Element('div');
     }
     if(this.options.elementOptions) {
       this.element.set(this.options.elementOptions);
+    }
+    if(this.options.className) {
+      this.element.addClass(this.options.className);
     }
     this.element.store(this.options.storageKeyName,this);
   },
