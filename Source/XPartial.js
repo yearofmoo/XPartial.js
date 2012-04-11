@@ -20,6 +20,7 @@ XPartial.implement({
     loadingClassName : 'loading',
     preserveHeightBetweenRequests : true,    
     applyXViewHeadersToElement : 'id,className',
+    revealWhenReady : true,
     elementOptions : {
 
     },
@@ -106,14 +107,22 @@ XPartial.implement({
   onRequest : function() {
     this.ready = false;
     this.empty();
-    this.show();
-    this.showLoading();
+    if(!this.options.revealWhenReady) {
+      this.show();
+      this.showLoading();
+    }
     this.fireEvent('request',[this.getElement()]);
   },
 
   onComplete : function() {
-    this.hideLoading();
-    this.show();
+    if(this.options.revealWhenReady) {
+      this.reveal();
+      this.hideLoading(true);
+    }
+    else {
+      this.show();
+      this.hideLoading();
+    }
     this.callChain();
     this.fireEvent('complete',[this.getElement()]);
     this.requested = true;
@@ -259,8 +268,16 @@ XPartial.implement({
     this.getElement().setStyle('display','block');
   },
 
+  reveal : function() {
+    this.getElement().reveal();
+  },
+
   hide : function() {
     this.getElement().setStyle('display','none');
+  },
+
+  dissolve : function() {
+    this.getElement().dissolve();
   },
 
   isLoading : function() {

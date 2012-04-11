@@ -29,12 +29,12 @@
 window.addEvent('domready',function() {
 
   var x = new XPartial({
+    container : 'wrapper',
     elementOptions : {
       id : 'xpartial',
       preserveHeightBetweenRequests : true
     }
   });
-  $(x).inject('wrapper');
 
   $$('.load').addEvent('click',function(event) {
     event.stop();
