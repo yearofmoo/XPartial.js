@@ -24,6 +24,9 @@ XPartial.implement({
     elementOptions : {
 
     },
+    revealFxOptions : {
+
+    },
     spinnerOptions : {
       style : {
         opacity : 0.5
@@ -71,6 +74,8 @@ XPartial.implement({
     if(!this.inner) {
       this.inner = new Element('div.inner').inject(this.element);
     }
+
+    this.element.set('reveal',this.options.revealFxOptions);
   },
 
   customizeElement : function() {
