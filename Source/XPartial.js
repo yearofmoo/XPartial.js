@@ -12,7 +12,7 @@ XPartial.implement({
 
   Implements : [Options, Events, Chain],
 
-  Binds : ['onRequest','onResponse','onComplete','onFailure'],
+  Binds : ['onRequest','onResponse','onComplete','onFailure','onAnimationComplete'],
 
   options : {
     className : 'xpartial',
@@ -53,6 +53,37 @@ XPartial.implement({
     this.setOptions(options);
     this.build();
     this.hide();
+  },
+
+  getAnimator : function() {
+    if(!this.animator) {
+      this.animator = new Fx.Reveal(this.getElement(),this.options.revealFxOptions);
+      this.animator.addEvents({
+        'complete':this.onAnimationComplete
+      });
+    }
+    return this.animator;
+  },
+
+  getAnimationDirection : function() { 
+    return this.animationDirection;
+  },
+  
+  setAnimationDirection : function(dir) {
+    this.animationDirection = dir;
+  },
+
+  onAnimationComplete : function() {
+    switch(this.getAnimationDirection()) {
+      case 'reveal':
+        this.onShow();
+        this.onAfterShow();
+      break;
+      case 'dissolve':
+        this.onHide();
+        this.onAfterHide();
+      break;
+    }
   },
 
   toElement : function() {
@@ -270,19 +301,29 @@ XPartial.implement({
   },
 
   show : function() {
+    this.onBeforeShow();
     this.getElement().setStyle('display','block');
+    this.onShow();
+    this.onAfterShow();
   },
 
   reveal : function() {
-    this.getElement().reveal();
+    this.onBeforeShow();
+    this.setAnimationDirection('reveal');
+    this.getAnimator().reveal();
   },
 
   hide : function() {
+    this.onBeforeHide();
     this.getElement().setStyle('display','none');
+    this.onHide();
+    this.onAfterHide();
   },
 
   dissolve : function() {
-    this.getElement().dissolve();
+    this.onBeforeHide();
+    this.setAnimationDirection('dissolve');
+    this.getAnimator().dissolve();
   },
 
   isLoading : function() {
@@ -291,6 +332,30 @@ XPartial.implement({
 
   isReady : function() {
     return this.ready;
+  },
+
+  onBeforeShow : function() {
+    this.fireEvent('beforeShow');
+  },
+
+  onBeforeHide : function() {
+    this.fireEvent('beforeHide');
+  },
+
+  onHide : function() {
+    this.fireEvent('hide');
+  },
+
+  onAfterShow : function() {
+    this.fireEvent('afterShow');
+  },
+
+  onAfterHide : function() {
+    this.fireEvent('afterHide');
+  },
+
+  onShow : function() {
+    this.fireEvent('show');
   },
 
   destroy : function() {
