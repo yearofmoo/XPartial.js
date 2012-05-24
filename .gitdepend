@@ -4,3 +4,5 @@
   path: Source/include/MooTools-Asset.Extras
 - repo: git://github.com/matsko/XView.js.git
   path: Source/include/XView.js
+- repo: git://github.com/matsko/Fx.Swap.git
+  path: Source/include/Fx.Swap

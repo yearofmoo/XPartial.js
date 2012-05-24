@@ -17,6 +17,7 @@ XPartial.implement({
   options : {
     className : 'xpartial',
     storageKeyName : 'XPartial',
+    swapper : 'Fade',
     loadingClassName : 'loading',
     preserveHeightBetweenRequests : true,    
     applyXViewHeadersToElement : 'id,className',
@@ -103,7 +104,8 @@ XPartial.implement({
 
     this.element.store(this.options.storageKeyName,this);
     if(!this.inner) {
-      this.inner = new Element('div.inner').inject(this.element);
+      var inner = this.createInnerElement();
+      this.setInner(inner);
     }
 
     this.element.set('reveal',this.options.revealFxOptions);
@@ -205,40 +207,55 @@ XPartial.implement({
     }
   },
 
-  onResponse : function(html) {
-    var xview = new XView(html);
+  getSwapper : function() {
+    if(!this.swapper) {
+      this.swapper = new Fx.Swap(this.getElement(),this.options.fxOptions);
+      this.swapper.setSwapper(this.options.swapper);
+    }
+    return this.swapper;
+  },
 
-    this.unlockHeight();
-    this.setContent(xview.getContent());
-    this.showLoading();
-    this.applyXViewHeaders(xview);
+  swap : function(html,fn) {
+    var element = this.createInnerElement(html);
+    var swapper = this.getSwapper();
+    swapper.swap(element);
+    swapper.chain(function() {
+      this.setInner(element);
+      fn();
+    }.bind(this));
+  },
 
-    var assets = xview.getAssets();
-    if(XPartial.supportsAssets() && assets && assets.length > 0) {
-      Asset.load(assets,this.onComplete);
+  replace : function(element,fn) {
+    if(this.isVisible() && this.getSwapper()) {
+      this.swap(element,fn);
     }
     else {
-      this.onComplete();
+      this.setContent(element);
+      fn();
     }
+  },
+
+  onResponse : function(html) {
+    var xview = new XView(html);
+    this.showLoading();
+    this.replace(xview.getContentHTML(),function() {
+      this.applyXViewHeaders(xview);
+      var assets = xview.getAssets();
+      if(XPartial.supportsAssets() && assets && assets.length > 0) {
+        Asset.load(assets,this.onComplete);
+      }
+      else {
+        this.onComplete();
+      }
+    }.bind(this));
   },
 
   hasPreviousRequest : function() {
     return this.requested;
   },
 
-  lockHeight : function() {
-    var elm = this.getElement();
-    var height = elm.getSize().y;
-    elm.setStyle('height',height);
-  },
-
-  unlockHeight : function() {
-    this.getElement().setStyle('height','auto');
-  },
-
   load : function(url,method,data) {
     if(this.hasPreviousRequest() && this.options.preserveHeightBetweenRequests) {
-      this.lockHeight();
       this.stripXViewHeaders();
     }
     this.getRequester().setOptions({
@@ -282,7 +299,19 @@ XPartial.implement({
     return this.inner;
   },
 
+  setInner : function(element) {
+    if(this.inner) {
+      this.inner.destroy();
+    }
+    this.inner = element;
+  },
+
+  createInnerElement : function(html) {
+    return new Element('div.inner').set('html',html).inject(this.getElement());
+  },
+
   showLoading : function(fast) {
+    return;
     var element = this.getElement();
     element.addClass(this.options.loadingClassName);
     var spinner = element.get('spinner');
@@ -293,6 +322,7 @@ XPartial.implement({
   },
 
   hideLoading : function(fast) {
+    return;
     var element = this.getElement();
     element.removeClass(this.options.loadingClassName);
     var spinner = element.get('spinner');
@@ -305,6 +335,14 @@ XPartial.implement({
     this.getElement().setStyle('display','block');
     this.onShow();
     this.onAfterShow();
+  },
+
+  isVisible : function() {
+    return this.getElement().getStyle('display') == 'block';
+  },
+
+  isHidden : function() {
+    return !this.isVisible();
   },
 
   reveal : function() {

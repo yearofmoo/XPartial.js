@@ -8,9 +8,6 @@
 .xpartial {
   border:1px solid #ddd;
 }
-.xpartial .inner {
-  padding:1em;
-}
 </style>
 </head> 
 
@@ -24,12 +21,14 @@
 <script type="text/javascript" src="../../Source/include/Xview.js/Source/XView.js"></script>
 <script type="text/javascript" src="../../Source/include/MooTools-Asset.css-patch/Source/Asset.css.js"></script>
 <script type="text/javascript" src="../../Source/include/MooTools-Asset.Extras/Source/Asset.Extras.js"></script>
+<script type="text/javascript" src="../../Source/include/Fx.Swap/Source/Fx.Swap.js"></script>
 <script type="text/javascript" src="../../Source/XPartial.js"></script>
 <script type="text/javascript">
 window.addEvent('domready',function() {
 
   var x = new XPartial({
     container : 'wrapper',
+    swapper : 'Fade',
     elementOptions : {
       id : 'xpartial',
       preserveHeightBetweenRequests : true
